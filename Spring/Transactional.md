@@ -32,11 +32,11 @@ spring的事务由容器统一管理，每个方法都可以加上事务，那�
 > 理解NESTED 关键是savepoint，如下代码，如果 B() 失败， A() 会回滚到 savepoint 位置，然后尝试调用 C()
 
 	    @Transactional (propagation = Propagation.REQUIRED ) 
-			void A() {
-				try {
-					// savepoint
-					B(); // PROPAGATION_NESTED 级别
-				} catch (SomeException) {
-					C();
-				}
-			}
+	    void A() {
+	        try {
+		  // savepoint
+		  B(); // PROPAGATION_NESTED 级别
+		} catch (SomeException) {
+		  C();
+		}
+	    }
