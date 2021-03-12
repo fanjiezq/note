@@ -2,16 +2,41 @@
 spring的事务由容器统一管理，每个方法都可以加上事务，那么方法调用时涉及多个事务，事务如何处理就会成为问题，处理的方式就是事务传播机制；spring提供了7种事务传播机制。
 下面的例子都是以如下代码进行讲解：
 
-  public void B(){}
+    public void B(){}
   
-  public void A(){
-    B();
-  }
- 
+    public void A(){
+    	  ...
+        B();
+        ...
+    }
+
 1. PROPAGATION_REQUIRED:需要事务；如果当前上下文没有事务，新建事务；如果上下文存在事务,加入当前事务;是 Spring 默认的一个事务传播属性。
-3. PROPAGATION_SUPPORTS:支持事务；如果当前上下文没有事务直接执行；如果上下文存在事务,加入当前事务
-4. PROPAGATION_MANDATORY:必须事务；如果当前上下文没有事务，抛出异常；如果上下文存在事务,加入当前事务
-5. PROPAGATION_REQUIRES_NEW:新建事务；如果当前上下文没有事务，新建事务；如果上下文存在事务,挂起当前事务，新建自己的事务，本事务执行完成后再释放上下文事务，两个事务时间并无关系
-6. PROPAGATION_NOT_SUPPORTED:不需要事务；如果当前上下文有事务，挂起当前事务，执行完成后再释放当前事务
-7. PROPAGATION_NEVER:不能存在事务；如果当前存在事务，则抛出异常。
-8. PROPAGATION_NESTED:与REQUIRED级别类似，与上下文事务一起提交，但是失败时会滚到savepoint点
+	+ 因为两个方法公用一个事务，两者为一体，任意一个方法失败都会引起整体的回滚
+
+2. PROPAGATION_SUPPORTS:支持事务；如果当前上下文没有事务直接执行；如果上下文存在事务,加入当前事务
+  + 这种传播级别的特点是事务并非必须的，上下文没有事务，也可以正常运行，如果上下文存在事务，那么失败会滚也是整体回滚
+
+3. PROPAGATION_MANDATORY:必须事务；如果当前上下文没有事务，抛出异常；如果上下文存在事务,加入当前事务
+	+ 这种传播级别适用于一些不能单独执行的方法，可以强制要求调用它的方法加上事务，用于提示
+
+4. PROPAGATION_REQUIRES_NEW:新建事务；如果当前上下文没有事务，新建事务；如果上下文存在事务,挂起当前事务，新建自己的事务，本事务执行完成后再释放上下文事务，两个事务时间并无关系
+	+ 因为两个方法是不同事务，两者之间并无关系，比如上面的代码，如果 B() 成功且提交，而B() 以后的代码出现异常，则A()方法回滚，但是B() 并不回滚
+
+5. PROPAGATION_NOT_SUPPORTED:不需要事务；如果当前上下文有事务，挂起当前事务，执行完成后再释放当前事务
+	+ 此传播级别限制当前方法不加入事务，因为事务会导致性能下降，某些很长的非核心业务并没有必要加入事务，或者大量的只读操作，并没有必要加入事务
+
+6. PROPAGATION_NEVER:不能存在事务；如果当前存在事务，则抛出异常。
+  + 暂时想不到使用的场景
+
+7. PROPAGATION_NESTED:与REQUIRED级别类似，与上下文事务一起提交，但是失败时会滚到savepoint点
+  + 理解NESTED 关键是savepoint，如下代码，如果 B() 失败， A() 会回滚到 savepoint 位置，然后尝试调用 C()
+
+	    @Transactional (propagation = Propagation.REQUIRED ) 
+			void A() {
+				try {
+					// savepoint
+					B(); // PROPAGATION_NESTED 级别
+				} catch (SomeException) {
+					C();
+				}
+			}
