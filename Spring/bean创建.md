@@ -135,11 +135,6 @@ ClassPathXmlApplicationContext 的构造方法中调用了其父类 AbstractAppl
             private final Map<String, ObjectFactory<?>> singletonFactories = new HashMap<>(16);
         }
 
-## bean的循环依赖问题
-+ bean创建过程中可能存在循环依赖问题,循环依赖问题产生的原因是在bean设计过程中A依赖了B,B依赖了A.而spring是以迭代的方式创建Bean的,即创建Bean的时候检查依赖,遇到存在的依赖的bean创建,则先创建依赖的bean
-+ 迭代方式创建Bean对于发现循环依赖来说非常简单,创建过程中为bean做标记,则在迭代过程中.如果存在循环依赖,总会找到自己
-+ spring只提供了单例模式下解决bean循环依赖问题的方案,方法是在bean创建完成之前就暴露自己.bean创建过程中遇到依赖会优先从缓存中获取依赖的bean,如果等到bean完全创建成功才将bean实例加入缓存,出现循环依赖时,被循环依赖的bean必然还不存在于缓存,所以无法解决循环依赖.spring在bean创建完成前就将实例存入缓存.虽然此时的实例数据并不完全,但是满足基本的依赖问题,实例数据后续补充完整即可.
-
 # BeanDefinition
 + BeanDefinition接口用于描述bean的元数据信息,在 Spring 中此接口有三种实现：RootBeanDefinition、ChildBeanDefinition 以及 GenericBeanDefinition。而这三种实现都继承了 AbstractBeanDefinition，其中 BeanDefinition 是配置文件元素标签在容器中的内部表示形式。元素标签拥有 class、scope、lazy-init 等属性，BeanDefinition 则提供了相应的 beanClass、scope、lazyInit 属性一一对应
 + Spring 通过 BeanDefinition 将配置文件中的配置信息转换为容器的内部表示，并将这些 BeanDefinition 注册到 BeanDefinitionRegistry 中。Spring 容器的 BeanDefinitionRegistry 就像是 Spring 配置信息的内存数据库，主要以 map 的形式保存，后续操作直接从 BeanDefinitionRegistry 中读取配置信息
