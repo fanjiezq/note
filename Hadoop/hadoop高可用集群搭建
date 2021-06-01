@@ -165,16 +165,11 @@ hadoop集群搭建
     node3 ： cd /usr/local/include/hadoop-2.7.2/sbin ; ./hadoop-daemon.sh start journalnode;
     node4 ： cd /usr/local/include/hadoop-2.7.2/sbin ; ./hadoop-daemon.sh start journalnode;
 7) 格式化namenode（两台namenode 只能格式化其中一台，另一台同步第一台的数据。格式化之前需要先删除集群的data和logs
-    node1 ： cd /usr/local/include/hadoop-2.7.2/bin;   ./hdfs namenode -format ; 
-             cd /usr/local/include/hadoop-2.7.2/sbin;  ./hadoop-daemon.sh start namenode 
-    node2 ： hdfs namenode -bootstrapStandby
+    node1 ： ./hdfs namenode -format 
+             ./hadoop-daemon.sh start namenode 
+    node2 ： ./hdfs namenode -bootstrapStandby 
+             ./hadoop-daemon.sh start namenode 
 8）在一个节点格式化zk集群
     node2 ： hdfs zkfc -formatZK
-9）关闭 journalnode
-    node2 ： cd /usr/local/include/hadoop-2.7.2/sbin ; ./hadoop-daemon.sh stop journalnode;
-    node3 ： cd /usr/local/include/hadoop-2.7.2/sbin ; ./hadoop-daemon.sh stop journalnode;
-    node4 ： cd /usr/local/include/hadoop-2.7.2/sbin ; ./hadoop-daemon.sh stop journalnode;
-10) 关闭namenode
-    node1 ： cd /usr/local/include/hadoop-2.7.2/sbin ; ./hadoop-daemon.sh stop namenode;
-11）正式启动集群 
+9）正式启动集群 
     node1 : cd /usr/local/include/hadoop-2.7.2/sbin ; ./start-dfs.sh 
