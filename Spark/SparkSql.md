@@ -1,5 +1,5 @@
 # 基础
 + SparkSql是Spark提供的一种以sql的方式编写spark程序的功能，与hive类似
-+ SparkSql需要依赖结构化的数据，所以spark提供了DataFrame和DataSet来配合SparkSql。 DataFrame就是描述信息的RDD，类似数据库的表结构，每个DataFrame都有列明，数据也是以列和行的形式组织管理。DataSet更进一层，以对象的形式组织管理数据，数据可以根据自定义的类型进行转化，数据使用时也可以以对象的方式操作
++ SparkSql需要依赖结构化的数据，所以spark提供了DataFrame和DataSet来配合SparkSql。 DataFrame就是描述信息的RDD，类似数据库的表结构，每个DataFrame都有列名，数据也是以列和行的形式组织管理。虽然只是增加了的一个列名，但是数据的组织管理方式完全不同了，简化了代码的编写，在数据计算过程中可以去除很多无效的数据。DataFrame的缺点是数据结构信息太少，只有列名没有数据类型，数据引擎无法进行编译期校验，对数据结构的分析还是需要依赖手动编写代码
++ DataSet在DataFrame更进一层，表结构描述增加了数据类型，所以DataSet是强类型的，每个列数据的类型更加严格，DataFrame 可以看作一个类型为Row的DataSet
 + RDD、DataFrame、DataSet 三者之间可以互相转换，RDD是Spark最原始最基础的数据结构，虽然后两者功能更强，但都是基于RDD，很多情况还是需要RDD
-
