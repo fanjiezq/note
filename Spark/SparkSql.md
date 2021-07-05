@@ -20,9 +20,9 @@
         public static void main(String[] args) throws AnalysisException {
 
             SparkSession spark = SparkSession.builder().appName("Java Spark SQL basic example").getOrCreate();
-
+          
             //创建无类型的DataSet.此处因为没有指定类型， 所以可以看作是一个DataFrame
-            Dataset<Row> dataset1 = spark.read().json("");
+            Dataset<Row> dataset1 = spark.read().json("people.json");
             //创建有类型的DataSet.此处因为没有指定类型， 所以可以看作是一个DataFrame
             List<Person> people = Arrays.asList(new Person(), new Person(), new Person());
             Dataset<Person> dataset2 = spark.createDataset(people, Encoders.bean(Person.class));
@@ -76,5 +76,9 @@
             }
         }
     }
+    
+    {"name":"Michael"}
+    {"name":"Andy", "age":30}
+    {"name":"Justin", "age":19}
 
 
