@@ -48,9 +48,9 @@
             Dataset<Row> dataFrame1 = spark.createDataFrame(stringJavaRDD, Person.class);
             // RDD -> DS
             Dataset<Person> dataset4 = spark.createDataset(stringJavaRDD.rdd(), Encoders.bean(Person.class));
-            // DF -DS
+            // DF -> DS
             Dataset<Person> dataset5 = dataFrame1.as(Encoders.bean(Person.class));
-            // DS -DF
+            // DS -> DF
             Dataset<Row> dataFrame2 = dataset4.toDF();
 
         }
