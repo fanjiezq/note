@@ -47,3 +47,27 @@
 + spark 的时间窗口操作类似分组聚合，spark将时间窗口看作一个列，每个窗口都是一个key，窗口操作就是根据这个key分组， 所以窗口操作都是结合聚合算子
 
 # 时间类型
+
+
+https://asmrs.live/movie/60d82ecceb46edd9ee313c7e
+http://asmrs.live/share/60d82ecceb46edd9ee313c7e
+
+
+http://asmrs.live/share/60ba89ae78102987795b2d6f
+http://asmrs.live/share/60ba89ae78102931205b2d6d
+http://asmrs.live/share/60ba87aaf0adab56c57cc013
+http://asmrs.live/share/60ba87aaf0adab7b967cc012
+http://asmrs.live/share/60ba84788451481a439b874a
+http://asmrs.live/share/60ba84788451485b9e9b8747
+http://asmrs.live/share/60ba84788451488e1b9b8746
+http://asmrs.live/share/60ba8478845148c07f9b8749
+http://asmrs.live/share/60ba847884514882029b8744
+http://asmrs.live/share/60ba8478845148e89e9b8743
+http://asmrs.live/share/60ba847884514886f19b8741
+http://asmrs.live/share/60ba84788451484f0d9b8742
+
+
+$.each($(".waterfall .card a"),function(index,item){
+        val link = $(item).attr("href");
+        console.log(link)
+})

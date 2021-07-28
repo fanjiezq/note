@@ -1,7 +1,12 @@
-# 计算流程
-## 针对批处理
-+ hadoop严格按照map/reduce模式，在map阶段将数据切分成片封装成mapTask，然后分发给集群node运行，然后根据业务需求启动若干
-## 针对流处理
+# 作业调度
++ hadoop严格按照map/reduce模式，在map阶段将数据切分成片封装成mapTask，然后分发给集群node运行，然后根据业务需求启动若干ReduceTask完成计算输出结果；在map/reduce过程中，必然经过Shuffle阶段，特别是存在多个ReduceTask的情况下，Shuffle阶段将数据数据经过分区，排序，局部合并，保证数据能正确高效的进入ReduseTask
++ Spark将运行流程划分为多个stage,每个stage又分为多个task在集群中的多个node运行，每个stage的运算结果交给下一个stage继续处理。可以看出Spark的运行流程其实就是多个map/reduce连接起来的，除了第一个和最后一个stage,其他的stage即是map任务也是reduce任务。 这种将多个map/reduce阶段连接成逻辑链的方式让数据处理更灵活了，可以非常简单的在一个程序中编写多个map/reduce逻辑。
++ flink的任务调度依赖 ExecutionGraph，在程序运行初期根据算子的关系构建出运行图，然后启动相应的TaskManager执行运算，可以说在ExecutionGraph构建完成后每个元素的数据流路径已经确定，每个元素会经过固定的数据流路线到经过各个TaskManager执行算子的运算
+
+# shuffle过程
++ hadoop的shuffle阶段比较复杂，包含了数据的分组，排序，局部合并，其流程固定，是map/reduce最主要的性能优化点
++ spark在stage之间存在shuffle,从高维度上看此阶段和hadoop一样，但是其底层的实现方式不同，spark的shuffle更多的是确定上游的数据该如何分发到下游，没有排序(后来也默认排序，但是也可配置为Hash  shuffle)，局部合并等流程，需要依靠算子自行实现
++ flink没有shuffle概念，取而代之的是partitioning，即上游元素如何分发到下游，与spark的不同点在于，spark上游数据所有的数据准备好以后才可以分发到下游，有一个阻塞的过程，flink则是一个元素一个元素的处理，所以它不需要复杂混洗流程，只需要一个分发策略
 
 
 # 并行度
@@ -84,5 +89,10 @@
     - Flink可以指定持久化数据的存储位置，可以是内存，文件系统，RocksDB
     - 相比于Spark,flink没有针对数据复用的持久化策略，因为flink是每来一个元素就处理一个元素，不会存在大量的数据处理结果需要缓存，所以没有必要
 
-##  shuffle流程
-+ 
+
+## 性能调优
++ 性能调优的方式很多，要结合具体的业务场景分析，但是一般都是针对以下四点优化
+    - 资源的充分和高效利用。可以申请多少资源，如何分配(每个Executor分配多少内存用于计算，多少内存用于保存持久化数据)
+    - 并发调优。数据如何分区，最大化利用框架的并发特性
+    - Shuffle调优。如何避免shuffle，不可避免时采用哪种shuffle
+    - 解决数据倾斜问题
