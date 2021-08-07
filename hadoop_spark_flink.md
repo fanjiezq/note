@@ -3,6 +3,31 @@
 + Spark将运行流程划分为多个stage,每个stage又分为多个task在集群中的多个node运行，每个stage的运算结果交给下一个stage继续处理。可以看出Spark的运行流程其实就是多个map/reduce连接起来的，除了第一个和最后一个stage,其他的stage即是map任务也是reduce任务。 这种将多个map/reduce阶段连接成逻辑链的方式让数据处理更灵活了，可以非常简单的在一个程序中编写多个map/reduce逻辑。
 + flink的任务调度依赖 ExecutionGraph，在程序运行初期根据算子的关系构建出运行图，然后启动相应的TaskManager执行运算，可以说在ExecutionGraph构建完成后每个元素的数据流路径已经确定，每个元素会经过固定的数据流路线到经过各个TaskManager执行算子的运算
 
+# 高可用
++ hadoop的高可用分为hdfs 和 yarn 两者的高可用
+    hdfs: 可以实现多个namenode,一主多从
+    yarn: 可以实现多个resourcemannager,一主多从
++ spark 一般直接运行在yarn集群，所以本身不需要考虑部署的高可用
++ flink 的高可用主要是解决jobmanager单点故障，无论哪种集群，flink的jobmanager默认都是单点的，flink可以使用zookeeper实现jobmanager的高可用，以主从模式创建多个jobmanager
+
+
+# 集群类型和作业部署模式
++ spark:
+    - Local:单机运行，不需要启动spark集群，用单机的多个线程来模拟Spark分布式计算，适用于本地测试。作业提交以后只有SparkSubmit进程，它即负责driver角色的任务提交，监控，又负责executor角色的计算
+    - Standalone模式: 构建一个master + worker 集群，优点是集群构建很简单，缺点是集群集群只能服务于spark，不能共享给其他框架，资源调度策略比较单一。
+        - client模式提交(--deploy-mode cluster):此模式master作为集群资源管理者，SparkSubmit进程即是客户端也是driver,作业执行过程中，driver必须像master申请资源，作业完成前，SparkSubmit进程不会退出
+        - cluster模式提交(--deploy-mode cluster):此模式master作为集群资源管理者，SparkSubmit进程作为客户端，只负责提交任务，完成后立即推出，由 DriverWrapper 进程运行Driver,进行资源的申请和监控
+    - Spark on Yarn模式:Spark客户端直接连接Yarn，和其他框架共享集群资源。
+        - client模式提交: 客户端新建一个SparkSubmit进程，将作业提交到集群，并运行driver程序，负责监控程序，此进程会一直存在；集群中的某个node会启动ExecutorLauncher进程，来做为ApplicationMaster申请资源
+        - cluster模式提交: 客户端新建一个SparkSubmit进程，将作业提交到集群，起作用仅仅是作为客户端把作业提交到集群，完成后立即关闭; 集群某个node会启动一个ApplicationMaster申请资源，Driver程序也在ApplicationMaster里面
++ flink:
+    - Local:单机运行，不需要启动集群，用单机的多个线程来模拟分布式计算，适用于本地测试。作业提交后只有一个主进程运行负责计算
+    - Standalone模式: 构建一个 Cluster + TaskManager 集群，Cluster作为集群资源管理者。优点是集群构建很简单，缺点是集群集群只能服务于flink，不能共享给其他框架，资源调度策略比较单一。
+    - Flink on Yarn模式:Spark客户端直接连接Yarn，和其他框架共享集群资源。
+        - Session Mode：事先在yarn集群上启动一个flink集群，所有作业都通过client提交到这个集群运行，共享集群资源。好处是节省了集群启动的开销，坏处是资源完全不隔离，某个任务导致一个TaskManager失败，其上运行的所有任务都会失败
+        - Application Mode: 一个作业启动一个集群，集群是作业提交以后临时建立的，作业完成后销毁集群回收资源。好处是可以与其他框架共享yarn这种资源管理器，资源的隔离性也比较好，一个作业引起的问题只会影响本作业，缺点是集群启动销毁的开销比较大
+        - Per-Job Mode:集群的建立方式与 Application Mode 一样，只是资源隔离性更强，因为一个  Application 可能存在多个Job，Per-Job Mode为每个Job都启动一个集群，优点是资源隔离性极强，缺点是集群启动销毁的开销比较大
+
 # shuffle过程
 + hadoop的shuffle阶段比较复杂，包含了数据的分组，排序，局部合并，其流程固定，是map/reduce最主要的性能优化点
 + spark在stage之间存在shuffle,从高维度上看此阶段和hadoop一样，但是其底层的实现方式不同，spark的shuffle更多的是确定上游的数据该如何分发到下游，没有排序(后来也默认排序，但是也可配置为Hash  shuffle)，局部合并等流程，需要依靠算子自行实现
@@ -89,10 +114,16 @@
     - Flink可以指定持久化数据的存储位置，可以是内存，文件系统，RocksDB
     - 相比于Spark,flink没有针对数据复用的持久化策略，因为flink是每来一个元素就处理一个元素，不会存在大量的数据处理结果需要缓存，所以没有必要
 
-
 ## 性能调优
 + 性能调优的方式很多，要结合具体的业务场景分析，但是一般都是针对以下四点优化
     - 资源的充分和高效利用。可以申请多少资源，如何分配(每个Executor分配多少内存用于计算，多少内存用于保存持久化数据)
     - 并发调优。数据如何分区，最大化利用框架的并发特性
     - Shuffle调优。如何避免shuffle，不可避免时采用哪种shuffle
     - 解决数据倾斜问题
+
+# exactly-once 的保证
++ Spark Stream: 严格来说Spark Stream并没有提供exactly-once的语义保证，更多的是依靠sourc而，sink以及特殊编码实现，一般将kafka作为source，依靠kafka的offset实现exactly-once，sink也需要特殊的编码方式比如幂等写入，事务写入，手动提交ack等方式实现exactly-once 
++ Flink:
+    - 幂等写实现:幂等写就是保证任意多次向sink写入同一条数据，只有一条生效，通常使用hbase.redis作为sink实现幂等写，但是使用场景有限
+    - checkpoint + 两阶段提交: flink将数据暂存起来，等到checkpoint完成后才提交到sink,只有经过checkpoint确认后的数据才会被下发到sink,这部分数据可以使用两阶段提交的方式实现事务性写入，但是要sink支持事务
+    - checkpoint + 预写日志: flink将数据暂存起来，等到checkpoint完成后才提交到sink,的
