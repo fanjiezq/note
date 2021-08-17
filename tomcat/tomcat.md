@@ -23,7 +23,7 @@
 
 # Server and Servie
 - 一个connector只能监听一个端口,服务器有时需要多个端口.比如需要同时监听80和443,此外服务器也需要一种简单方式开启和关闭整个tomcat(很多组件之间并没有从属关系,开始或关闭时需要单独处理)
-- Server 也是一个组件,它i代表整个tomcat服务器,换句话说代表所有组件集合, 使用Server可以总整体上管理tomcat的组件
+- Server 也是一个组件,它代表整个tomcat服务器,换句话说代表所有组件集合, 使用Server可以总整体上管理tomcat的组件
 - Server 利用 Servie 管理组件,Servie包含一个container和多个connector,还提供start(),stop()等生命周期方法,通过这些生命周期方法,可以统一管理所有组件的生命周期,支持多个connector可以让服务器监听多个端口
 
 # Loader
