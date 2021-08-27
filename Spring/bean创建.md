@@ -157,3 +157,7 @@ ClassPathXmlApplicationContext 的构造方法中调用了其父类 AbstractAppl
     BeanDefinitionReader.loadBeanDefinitions() -> 
     XmlBeanDefinitionReader.loadBeanDefinitions()
     至此通过加载 XML 文件， 将xml文件解析为对应的 BeanDefinition ，完成了 Bean 定义的加载和注册
+
+# BeanFactory和FactoryBean区别
++ BeanFactory 是Spring的核心接口之一，负责Bean的查询，定位等方面的管理功能，Spring为其提供了多种实现，比如DefaultListableBeanFactory，ClassPathXmlApplicationContext
++ FactoryBean 是Spring为用户提供的一种可以自定义Bean生产方式的手段，实现了FactoryBean接口的bean本身就成了一个工厂,bean的生成不再经过默认的bean工厂生产，而是直接由FactoryBean生成，可以定制非常个性化的Bean,比如AOP工厂类的实现，ProxyFactoryBean，或者MyBatis的SqlSessionFactoryBean都是以这种方式实现

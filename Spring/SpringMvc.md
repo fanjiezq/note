@@ -1,0 +1,7 @@
+# SpringMVC请求过程
++ SpringMVC是运行在Tomcat服务器上的，请求流程需要从Tomcat开启。Tomcat是围绕servlet规则开发的一个容器或者一个平台，它负责监听，接收和调度网络请求，让每个请求可以被对应的应用服务处理，所以Tomcat最核心的功能就是调度。Tomcat服务器启动成功以后，会有一个专门的后台线Connector程负责接听端口，接受到来的网络请求。每到来一个请求Connector线程就解析请求参数，将其封装成Request对象传递到后台调度器。后台调度器会根据请求路径判断请求该那个服务处理，开启一个线程，执行对应服务的Servlet
++ SpringMVC本质上就是一个Servlet，它最核心的类是DispatcherServlet，包含init(), destroy(),service()等标准方法，tomcat可以调用这个DispatcherServlet处理请求
++ DispatcherServlet处理请求整个流程主要依赖三个组件，HandlerMapping、HandlerAdapter、ModelAndView。请求处理分三步:
+    1. 首先是路由，当线程执行了DispatcherServlet的service方法时，DispatcherServlet可以获取到Request和Response。首先DispatcherServlet会根据请求的路径从HandlerMapping中匹配到对应的Handler。HandlerMapping就是Controller中陆游和方法的映射关系，得到的Handler是一个HandlerExecutionChain，处理逻辑和拦截器构成一个责任链，拦截器在请求执行的前后运行，类似aop的环绕通知
+    2. 找到HandlerMapping后知道了请求的request,也可以知道处理逻辑，找到一个合适的HandlerAdapter开始正是执行逻辑，并封装返回结果。HandlerAdapter存在一个方法 ModelAndView handle(HttpServletRequest request, HttpServletResponse response, Object handler) 
+    3. 处理完请求以后返回ModelAndView对象，DispatcherServlet获取利用前端渲染引擎，将ModelAndView对象的属性渲染成浏览器可识别的内容，填充到response对象中返回

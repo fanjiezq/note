@@ -40,3 +40,12 @@ spring的事务由容器统一管理，每个方法都可以加上事务，那�
         C();
       }
     }
+
+# 事务生效场景
++ 数据库引擎不支持事务
++ 没有为数据源配置事务管理器
++ 加@Transcction注解的类不是Spring容器管理的
++ @Transcction注解没有在public方法上
++ @Transcction注解在类内部自调
++ 异常被压制，无法抛出
++ 抛出的异常类型不对，默认捕获到RuntimeException才会进行回滚
