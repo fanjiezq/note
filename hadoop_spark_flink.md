@@ -7,7 +7,7 @@
 + hadoop的高可用分为hdfs 和 yarn 两者的高可用
     hdfs: 可以实现多个namenode,一主多从
     yarn: 可以实现多个resourcemannager,一主多从
-+ spark 一般直接运行在yarn集群，所以本身不需要考虑部署的高可用
++ spark只是一个计算框架，一般直接运行在yarn集群，所以本身不需要考虑部署的高可用。在计算过程中Driver 就是Yarn的AM，Yarn会保证它的失败重试
 + flink 的高可用主要是解决jobmanager单点故障，无论哪种集群，flink的jobmanager默认都是单点的，flink可以使用zookeeper实现jobmanager的高可用，以主从模式创建多个jobmanager
 
 
@@ -19,7 +19,7 @@
         - cluster模式提交(--deploy-mode cluster):此模式master作为集群资源管理者，SparkSubmit进程作为客户端，只负责提交任务，完成后立即推出，由 DriverWrapper 进程运行Driver,进行资源的申请和监控
     - Spark on Yarn模式:Spark客户端直接连接Yarn，和其他框架共享集群资源。
         - client模式提交: 客户端新建一个SparkSubmit进程，将作业提交到集群，并运行driver程序，负责监控程序，此进程会一直存在；集群中的某个node会启动ExecutorLauncher进程，来做为ApplicationMaster申请资源
-        - cluster模式提交: 客户端新建一个SparkSubmit进程，将作业提交到集群，起作用仅仅是作为客户端把作业提交到集群，完成后立即关闭; 集群某个node会启动一个ApplicationMaster申请资源，Driver程序也在ApplicationMaster里面
+        - cluster模式提交: 客户端新建一个SparkSubmit进程，将作业提交到集群，起作用仅仅是作为客户端把作业提交到集群，完成后立即关闭; 集群某个node会启动一个Container运行Driver程序，Driver就相当与一个AM
 + flink:
     - Local:单机运行，不需要启动集群，用单机的多个线程来模拟分布式计算，适用于本地测试。作业提交后只有一个主进程运行负责计算
     - Standalone模式: 构建一个 Cluster + TaskManager 集群，Cluster作为集群资源管理者。优点是集群构建很简单，缺点是集群集群只能服务于flink，不能共享给其他框架，资源调度策略比较单一。
@@ -30,9 +30,8 @@
 
 # shuffle过程
 + hadoop的shuffle阶段比较复杂，包含了数据的分组，排序，局部合并，其流程固定，是map/reduce最主要的性能优化点
-+ spark在stage之间存在shuffle,从高维度上看此阶段和hadoop一样，但是其底层的实现方式不同，spark的shuffle更多的是确定上游的数据该如何分发到下游，没有排序(后来也默认排序，但是也可配置为Hash  shuffle)，局部合并等流程，需要依靠算子自行实现
++ spark在stage之间存在shuffle,从高维度上看此阶段和hadoop一样，但是其底层的实现方式不同，spark的shuffle更多的是确定上游的数据该如何分发到下游，没有排序，后来也默认排序但是只是为了底层性能优化在map端排序，reduce端并无排序效果，排序还是依靠算子自行实现
 + flink没有shuffle概念，取而代之的是partitioning，即上游元素如何分发到下游，与spark的不同点在于，spark上游数据所有的数据准备好以后才可以分发到下游，有一个阻塞的过程，flink则是一个元素一个元素的处理，所以它不需要复杂混洗流程，只需要一个分发策略
-
 
 # 并行度
 三个框架都是分布式计算框架， 核心思想都是分而治之，用并行计算提升计算的整体效率，但是三者在实现并行度策略上有所不同
@@ -41,8 +40,9 @@
 + mapreduce的并行读依靠文件切片，如果文件比较小，一个文件就是一个切片，如果文件比较大，一个切片一般为一个文件块，每个切片对应一个map任务
 
 ## Spark
-+ spark的job是分阶段的，且阶段之间存在顺序依赖，所以每个阶段都类似与一次mapreduce,可以使用集群的几乎所有计算资源，如何让这些计算资源充分利用提升效率是spark考虑的核心，所以spark的每个阶段都可以设置并行度，一般设置为可使用资源的cpu核心数，可以最大程度利用资源
-+ spark的第一个阶段是直接对接数据源，无法设置并行度，它根据数据源的不同实现不同的并行度，如果数据源是HDFS的话，并行度就按照hdfs的标准，等于处理的文件块数;如果是本地文件，
++ spark的job是分阶段的，且阶段之间存在顺序依赖，所以每个阶段都类似与一次mapreduce,可以使用集群的几乎所有计算资源，如何让这些计算资源充分利用提升效率是spark考虑的核心，最好是每个Stage都能利用上集群全部资源。
++ spark程序的并行度与两个因素有关，一个是设置的并行度，一个是数据的分区数量。并行度控制Stage的Task数量，分区数量是对数据进行分区，两者结合决定作业的并行度。所以首先需要设置作业的并行度，这样首个Stage的Task数量是确认的，后续算子会根据之前算子的数据分区调整并行度。可以使用groupByKey，coalesce,repartition等算子重新分区实现并行度的调整
++ spark的第一个阶段是直接对接数据源，不同数据源使用不同的方式进行数据分区，如果数据源是HDFS的话，并行度就按照hdfs的标准，等于处理的文件块数;普通文件和集合就直接在代码中指定分区数量
 
 ## flink
 + Flink程序一般使用各种算子将数据进行一系列的转换和分发，在实际运行过程中，每个算子一般对应一个任务，而这些任务又可以被分为若干子任务，子任务的数量就是这个任务的并行度，每个算子的并行度都是可以设置的
@@ -64,12 +64,11 @@
 + 在数据处理过程中解决数据倾斜
     - 因为数据倾斜的场景很多，比如聚合操作某几个key数据很多，大量的key数据很多，join操作某几个key数量很多。不同的场景解决方式不同，但是都属于在数据处理过程中解决数据倾斜，具体见下文
 + 针对key解决数据倾斜
-    - 如果进行聚合或者join操作发现只有非常少量的key的数据量远高于平均值，可以先过滤这几个key，然后单独提取出这几个key进行处理，如果
+    - 如果进行聚合或者join操作发现只有非常少量的key的数据量远高于平均值，可以先过滤这几个key，然后单独提取出这几个key进行处理
     - 如果进行聚合操作，且有很多key的数据量远高于平均值，可以使用两阶段聚合，首先将key加上不同前缀，分批聚合，然后第二阶段去除前缀，全量聚合
 + 针对计算流程解决数据倾斜
     - 针对join操作，且两个数据集一大一小，小的足以存储在内存中，考虑使用map端join，将小的数据集放在mapper的内存，将大数据集拆分
     - 如果join操作的两个数据集都很大，且有很多key的数据量远高于平均值，采用类似两阶段聚合，将把key加上不同的后缀进行局部连接，然后去除后缀进行全局连接
-
 
 # 流处理(spark vs flink）
 ## 模型对比
@@ -100,7 +99,7 @@
 
 ## 状态机制
 + spark提供了一个 mapGroupsWithState 算子用于保存状态，在 流处理过程中可以实现状态的获取和更新，但是此函数必须跟随在groupByKey算子后面
-+ flink 提供 RichFunction 接口，实现此借口就可以创建状态变量，并进行访问和更新，所以每个算子内部都可以获取状态。flink提供了五种状态变量(ValueState，ListState，ReducingState，AggregatingState，MapState)可以根据业务场景选择使用。
++ flink 提供 RichFunction 接口，实现此接口就可以创建状态变量，并进行访问和更新，所以每个算子内部都可以获取状态。flink提供了五种状态变量(ValueState，ListState，ReducingState，AggregatingState，MapState)可以根据业务场景选择使用。
 
 ## 持久化机制和故障恢复
 + 数据持久化有两个作用，一是当程序中有需要复用的计算结果，将其持久化到内存中，达到数据的复用;二是将计算结果和状态持久化到分布式的存储系统，程序进行异常恢复时可以从失败处恢复，不需要重新计算。
@@ -116,14 +115,34 @@
 
 ## 性能调优
 + 性能调优的方式很多，要结合具体的业务场景分析，但是一般都是针对以下四点优化
-    - 资源的充分和高效利用。可以申请多少资源，如何分配(每个Executor分配多少内存用于计算，多少内存用于保存持久化数据)
+    - 资源的充分和高效利用。可以申请多少资源，如何分配
     - 并发调优。数据如何分区，最大化利用框架的并发特性
     - Shuffle调优。如何避免shuffle，不可避免时采用哪种shuffle
     - 解决数据倾斜问题
 
 # exactly-once 的保证
-+ Spark Stream: 严格来说Spark Stream并没有提供exactly-once的语义保证，更多的是依靠sourc而，sink以及特殊编码实现，一般将kafka作为source，依靠kafka的offset实现exactly-once，sink也需要特殊的编码方式比如幂等写入，事务写入，手动提交ack等方式实现exactly-once 
++ Spark Stream: 严格来说Spark Stream并没有提供exactly-once的语义保证，更多的是依靠source，sink以及特殊编码实现，一般将kafka作为source，依靠kafka的offset实现exactly-once，sink也需要特殊的编码方式比如幂等写入，事务写入，手动提交ack等方式实现exactly-once 
 + Flink:
     - 幂等写实现:幂等写就是保证任意多次向sink写入同一条数据，只有一条生效，通常使用hbase.redis作为sink实现幂等写，但是使用场景有限
     - checkpoint + 两阶段提交: flink将数据暂存起来，等到checkpoint完成后才提交到sink,只有经过checkpoint确认后的数据才会被下发到sink,这部分数据可以使用两阶段提交的方式实现事务性写入，但是要sink支持事务
-    - checkpoint + 预写日志: flink将数据暂存起来，等到checkpoint完成后才提交到sink,的
+    - checkpoint + 预写日志: flink将数据暂存起来，等到checkpoint完成后才提交到sink
+
+# 背压处理
+背压机制是所有流处理系统都必须要考虑的能力，因为生产环境数据流的到来速度是不一样的，如果上游数据生产速度过快，下游来不及消化，就会导致下游出现资源不足或者内存溢出，如何保证系统在波动比较大的情况下仍旧能够平稳运行是背压机制需要考虑的问题。而且背压机制必须从数据源头到数据结束整个覆盖才有意义
++ spark背压机制:
+    - spark1.5 之前采用静态速率预估实现背压，预估Executor的消费速度，在程序中预先设置一个发送速率值，各个Executor遵循这个速率发送和接受数据
+    - spark1.5 之后采用动态速率预估实现背压，Driver内部存在一个RateController监控各个executor的消费速度，然后进行速率预估，并将估值发送给各个Executor，控制生产和消费速度
++ flink背压机制:
+    - flink1.5 之前flink采用缓存池 + 阻塞的机制实现背压，flink的TaskManager的发送端和接受端都存在缓冲池，接受端缓存满了以后就不会从发送方拉取数据，导致发送方缓存池数据积压，发送缓存满了以后也会拒绝接收数据，这样层层递进，整个计算链条实现背压.此方案的问题是一个节点处理速度慢会影响整个计算链条
+    - flink 1.5 之后将缓存分为两部分，独占缓存和浮动缓存，消费端会把独占缓存大小发给发送端，发送端先尽可能快的发送数据直到独占缓存变为0,同时发送方会把在排队的数据量发送给接收方，接收方根据自己的情况决定要不要使用浮动缓存。这样消费快的时候不开启浮动缓存，消费慢的时候开启浮动缓存，让上游能继续发送数据不至于导致整个计算链条被阻塞。
+
+
+# 内存管理
++ spark的内存管理主要就是针对Executor的JVM Heap内存划分，主要包含三个部分(基于spark 2.x)
+    - Reserved Memory:保留内存，固定300M
+    - Spark Memeory:框架运行需要的内存，包含Storage Memeory 和 Execution Memory，分别用于数据的持久化和shuffle算子产生的结果，默认占用空间 (Heap Size - 300MB) x 75% 
+    - User Memory:用户内存，用于保存我们编写程序时使用的变量，默认占用空间 (Java Heap - Reserved Memory) x 25% ，所以有时候我们的变量数据并没有超过Executor总内存也会出现OOM,因为超过了User Memory
++ Flink采用 MemorySegment 方式管理 TaskManager 的内存，MemorySegment一段固定长度的内存，默认32KB，是flink内存管理的基本单元。MemorySegment 可以是堆内内存，也可以是堆外内存，可以说Flink在JVM内存管理体系之上新创建了一套体系，更像存C++的内存管理体系
+    - NetWork Buffer:用于网络传输的缓存，在TaskManagerer启动时分配的
+    - Managed Memeory: 由 MemoryManager 管理的一组 MemorySegment 集合，主要用于框架的cache，join等中间数据的存储
+    - Remaining JVM heap:保存TaskManager的数据结构，和用户代码的局部变量
