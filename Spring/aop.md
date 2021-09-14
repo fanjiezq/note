@@ -44,3 +44,12 @@
     
     最后一行的 proxyFactory.getProxy(getProxyClassLoader()) 是最终创建Proxy的地方,可能会调用两个类CglibAopProxy.getProxy() 和 JdkDynamicAopProxy.getProxy()
 
+# AOP 失效场景
+(1) 在一个类内部调用时，被调用方法的 AOP 声明将不起作用。
+(2) 对于基于接口动态代理的 AOP 事务增强来说，由于接口的方法都必然是 public ，这就要求实现类的实现方法也必须是 public 的（不能是 protected、private 等），同时不能使用 static 的修饰符。所以，可以实施接口动态代理的方法只能是使用 public 或 public final 修饰符的方法，其他方法不可能被动态代理，相应的也就不能实施 AOP 增强，换句话说，即不能进行 Spring 事务增强了。
+(3) 基于 CGLib 字节码动态代理的方案是通过扩展被增强类，动态创建其子类的方式进行 AOP 增强植入的。由于使用 final、static、private 修饰符的方法都不能被子类覆盖，这些方法将无法实施 AOP 增强。所以方法签名必须特别注意这些修饰符的使用，以免使方法不小心成为事务管理的漏网之鱼。
+
+# AOP 实现
++ AOP在实现的方式就是新建一个代理类来替换原始Bean,这个代理类Bean与普通的类Bean在本质上并无不同，它的改造过程也是Bean实例化步骤中的一环
++ Spring中的每个Bean最终都会被定义为一个BeanDefinition描述，普通Bean对应的是GenericBeanDefinition，而aop代理类对应的是 advisorBeanDefinition，在类加载过程中如果发现了某些类符合AOP的匹配规则就会建立advisorBeanDefinition，最终获取到的Bean就是代理类
++ Spring的代理Bean有两种生成方式，对接口方法的代理使用java的动态代理类实现，没有接口方法的代理使用cglib实现

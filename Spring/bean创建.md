@@ -161,3 +161,13 @@ ClassPathXmlApplicationContext 的构造方法中调用了其父类 AbstractAppl
 # BeanFactory和FactoryBean区别
 + BeanFactory 是Spring的核心接口之一，负责Bean的查询，定位等方面的管理功能，Spring为其提供了多种实现，比如DefaultListableBeanFactory，ClassPathXmlApplicationContext
 + FactoryBean 是Spring为用户提供的一种可以自定义Bean生产方式的手段，实现了FactoryBean接口的bean本身就成了一个工厂,bean的生成不再经过默认的bean工厂生产，而是直接由FactoryBean生成，可以定制非常个性化的Bean,比如AOP工厂类的实现，ProxyFactoryBean，或者MyBatis的SqlSessionFactoryBean都是以这种方式实现
+
+
+# Bean实例化流程
+1. 实例化BeanFactory,在实例化过程中会扫描所有的bean名称，根据beanname获取到BeanDefinition实例化那些不需要懒加载的bean
+2. 实例化时需要为bean注入属性，可以采用构造函数注入也可以使用Setter方法注入
+3. 实例化完成后开始注入Aware，所有实现了Aware接口的bean都会调用对应的接口方法
+4. 调用BeanPostProcessor的postProcessBeforeInitialization方法
+5. 调用Bean的初始化方法
+6. 调用BeanPostProcessor的postProcessAfterInitialization方法
+7. 注册Bean的销毁方法
