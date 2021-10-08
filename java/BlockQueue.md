@@ -3,4 +3,3 @@
 + LinkedBlockingQueue本质上就是一个生产者消费者模型，其阻塞特性是依靠java的await/notify机制实现，当一个线程作为生产者执行put()方法往队列追加元素，如果发现队列元素量已经等于队列容量，就调用await()让本线程等待，等待的线程会进入等待队列，只有等到别的线程唤醒才会转化为阻塞态，进入阻塞队列然后被继续调度。消费者线程在使用take()获取数据时也会判断队列容量是不是为空，为空就调用await()让自身陷入等待，然后调用notify() 唤醒一个线程
 + 为保证线程安全，LinkedBlockingQueue 插入数据和获取数据都进行加锁操作，由于插入数据和获取数据分别在队列的头和尾，所以有两个锁.锁是采用ReentrantLock实现的，为了提升并发性能，内部还维护了notEmpty、notFull 状态位，用以更快的唤醒等待的线程
 + ArrayBlockingQueue 底层使用数组实现的，在创建时必须为其指定容量，因为是数组形式保存在创建对象时就申请好了内存，在一些并发量比较低的简单场景，ArrayBlockingQueue性能更高，但是ArrayBlockingQueue只有一个锁，官方测试，在并发量比较大的情况下 LinkedBlockingQueue 性能更高
-
