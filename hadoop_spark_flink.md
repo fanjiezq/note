@@ -23,7 +23,7 @@
 + flink:
     - Local:单机运行，不需要启动集群，用单机的多个线程来模拟分布式计算，适用于本地测试。作业提交后只有一个主进程运行负责计算
     - Standalone模式: 构建一个 Cluster + TaskManager 集群，Cluster作为集群资源管理者。优点是集群构建很简单，缺点是集群集群只能服务于flink，不能共享给其他框架，资源调度策略比较单一。
-    - Flink on Yarn模式:Spark客户端直接连接Yarn，和其他框架共享集群资源。
+    - Flink on Yarn模式:Flink客户端直接连接Yarn，和其他框架共享集群资源。
         - Session Mode：事先在yarn集群上启动一个flink集群，所有作业都通过client提交到这个集群运行，共享集群资源。好处是节省了集群启动的开销，坏处是资源完全不隔离，某个任务导致一个TaskManager失败，其上运行的所有任务都会失败
         - Application Mode: 一个作业启动一个集群，集群是作业提交以后临时建立的，作业完成后销毁集群回收资源。好处是可以与其他框架共享yarn这种资源管理器，资源的隔离性也比较好，一个作业引起的问题只会影响本作业，缺点是集群启动销毁的开销比较大
         - Per-Job Mode:集群的建立方式与 Application Mode 一样，只是资源隔离性更强，因为一个  Application 可能存在多个Job，Per-Job Mode为每个Job都启动一个集群，优点是资源隔离性极强，缺点是集群启动销毁的开销比较大

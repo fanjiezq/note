@@ -27,6 +27,7 @@
 
 ## JDK8 实现
 + jdk7的分段锁实现使 ConcurrentHashMap 理论上最大并发度为 Segment 个数，但是其寻址多了一次hash操作，JDK8 抛弃了 Segment 概念，其底层数据结构又变回 HashMap 一样，只有一个链表数组，不同的是在进行数据存储时，如果链表已经存在元素，就对链表的第一个元素使用 synchronized 加锁，也可以保证线程安全，且实现更简单
++ get方法是没有加锁的，所以在数据插入过程中可以并发读取数据，在get过程中，链表node的value是volatile修饰的，保证变量的可见性
 
 ## jdk1.8扩容机制
 + 内部维护一个CtrlSize变量标识当前HashMap的状态
