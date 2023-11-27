@@ -1,3 +1,14 @@
+# 概念
++ 对应用层app来说，Binder是一个实现了Ibinder接口，具有跨进程通信能力的类
++ 对FrameWork层来说，Binder是ServiceManager连接各种系统Service，用户Server的桥梁
++ 对Native层，Binder是操作系统的一种跨进程通信方式，利用系统调用实现跨进程数据传递，并在此基础上建立了一套跨进程通信体系
++ 对内核来说，Binder是一种驱动，是一种虚拟设备
+
+# 为什么选择binder
++ 高效: 比起socket，管道等linux原生的IPC方式，Binder利用mmp()实现一次通信只需要一次数据拷贝，效率更高
++ 稳定: 比起linux原生的内存映射方式的IPC，Binder更稳定
++ 改造方便: Binder属于Andoid特有的IPC通信方式，改造优化更方便，有利于建立一套适合android的通信体系
+
 # 基础架构
 + Binder 是Android特有的IPC通信方式，是android最常用的进程间通信方式(也有一些其他方式，比如Zygote通信便是采用socket)。Binder 使用方式很简单，编写好服务端和客户端程序就可以立即进行通信，者得益于Android建立的完整的binder通信模型
 + Binder通信模型是C/S架构，具体涉及四个角色：服务端、客户端、服务管理者、底层驱动
