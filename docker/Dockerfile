@@ -16,11 +16,15 @@ RUN apt-get install -y locales && rm -rf /var/lib/apt/lists/* && localedef -i en
 
 # 安装java 环境
 ADD jdk-17.0.7_linux-x64_bin.tar.gz /usr/local/ 
-ADD hadoop-3.3.6.tar.gz /usr/local/
-ADD apache-zookeeper-3.9.1-bin.tar.gz /us/local/ 
+ENV PATH=$PATH:/usr/local/jdk-17.0.7/bin
+
+ADD apache-zookeeper-3.9.1-bin.tar.gz  /usr/local/
+RUN cp /usr/local/apache-zookeeper-3.9.1-bin/conf/zoo_sample.cfg /usr/local/apache-zookeeper-3.9.1-bin/conf/zoo.cfg
+RUN /usr/local/apache-zookeeper-3.9.1-bin/bin/zkServer.sh start
+
 ADD kafka_2.12-3.6.0.tgz /usr/local/
+RUN /usr/local/kafka_2.12-3.6.0/bin/kafka-server-start.sh -daemon /usr/local/kafka_2.12-3.6.0/config/server.properties
+
+ADD hadoop-3.3.6.tar.gz /usr/local/
+
 ADD flink-1.18.0-bin-scala_2.12.tgz /usr/local
-
-# 设置java环境变量
-ENV PATH=$PATH:/usr/local/include/jdk-17.0.7/bin
-
