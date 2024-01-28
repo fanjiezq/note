@@ -1,3 +1,4 @@
+https://zhuanlan.zhihu.com/p/79219960
 # HashMap
 ## 实现原理
 + HashMap 简单来说就是一个链表数组，基础是一个数组，每个数组元素是一个链表(Entry)
