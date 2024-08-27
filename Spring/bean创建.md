@@ -1,5 +1,5 @@
 # ApplicationContext 构建
-Spring的 ApplicationContext 是Spring的核心类,它 BeanFactory 的升级版,继承了 BeanFactory 接口,拥有生产bean的能力,它同时扩展了其他的功能,在项目运行过程中 ApplicationContext 对象保存着诸多与容器全局相关的数据
+Spring的 ApplicationContext 是Spring的核心类,它是 BeanFactory 的升级版,继承了 BeanFactory 接口,拥有生产bean的能力,它同时扩展了其他的功能,在项目运行过程中 ApplicationContext 对象保存着诸多与容器全局相关的数据
 
 Spring有多种类型的 ApplicationContext 适用与不同的场景.但是基本的结构流程并没有不同,其中最直观的就属 ClassPathXmlApplicationContext ,早期的Spring 通过 xml 文件配置bean.ClassPathXmlApplicationContext就是用来加载xml文件并初始化项目的.代码如下:
     

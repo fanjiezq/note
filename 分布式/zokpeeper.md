@@ -1,3 +1,7 @@
+# CAP理论 VS BASE理论
++ cap: https://cloud.tencent.com/developer/article/1860632
++ base: https://javaguide.cn/distributed-system/protocol/cap-and-base-theorem.html#base-%E7%90%86%E8%AE%BA%E4%B8%89%E8%A6%81%E7%B4%A0
+
 # 架构
 + zookeeper 集群采用主从模式，由三个组件构成
     - Master:负责发起投票和决议，更新系统状态
@@ -9,7 +13,7 @@ zookeeper通过ZAB协议来保证集群数据一致性，整体的思想是，�
 # 消息广播协议
 1. 消息广播协议主要用于集群数据同步，实现流程类似两阶段提交协议。客户端可以连接集群任意一个节点，发起一个写请求，无论客户端连接到谁，这个写请求最终都会被转发到leader节点，leader节点不会立即写入数据而是先进行节点投票
 2. 首先leader会开启一个事务，并为事务分配一个全局单调递增的唯一id,然后广播到所有follwer进行投票，follwer接收到投票事务后会将其记录在本地日志，然后返回一个ack。如果有超过一半的follwer写入成功(包括leader)，则表示投票成功进入提交阶段
-3. leader会广播一个commit请求给所有follwer进行事务提交，leader本身也会提交。此时的广播包含follwer和obServer，因为obServer之前并没有这个事务的信息，所以针对obServer的提交还要包含提交的最新数据
+3. leader会广播一个commit请求给所有follwer进行事务提交，leader本身也会提交。此时的广播包含follwer和obServer，因为obServer之前并没有这个事务的信息，所以针对obServer的提交还要包含提交的最新数据。在这个阶段中只要LEADER不挂，数据一定可以完全同步到所有节点
 4. 在消息广播过程中，所有的消息都需要确保有序，leader内部会为每个follwer维护一个FIFO的消息队列，保证所有的事务都是有序的
 
 # 崩溃恢复协议
@@ -18,4 +22,4 @@ zookeeper通过ZAB协议来保证集群数据一致性，整体的思想是，�
     1. 节点通过消息广播进行节点选举， 初始状态下每个节点都处于LOOKING状态，开始进行选举时每个节点都会优先选举自己为主节点，并将消息广播到集群，消息形式为(myid, ZXID)
     2. 每个节点收到其他节点的消息后都会进行判断，规则是先比较ZXID，ZXID大的优先选为leader,ZXID相同myid大的作为leader,然后更新自己的选票，准备发起下一轮投票，比如节点A初始消息为(1, 0)，然后接收到一个(2,0)，那么下一论投票它会广播这条消息(2, 0) 
     3. 经过几轮投票，最终会有一个消息获取到过半节点的同意，就不必进行下一论投票，那个消息代表的节点就更新自己的状态为LEADING,其他节点也会更新自己状态变为FOLLOWING
-+ ZXID是zk的事务编号，leader每次写操作都会开启一个事务并设置一个事务编号，当前事务的编号是之前事务编号+1,ZXID被保存在每个节点本地。因为ZXID自增的特性，可以得出，一个节点的ZXID最大，它必然包含了集群最新的数据，所以在进行节点选举时就选ZXID最大的节点作为新节点，就可以保证在旧leader提交的数据，在新的leader也有。新leader选举完成后，learner从新leader同步数据，集群状态就可以和错误恢复之前一样
++ ZXID是zk的事务编号，leader每次写操作都会开启一个事务并设置一个事务编号，当前事务的编号是之前事务编号+1,ZXID被保存在每个节点本地。因为ZXID自增的特性，可以得出，一个节点的ZXID最大，它必然包含了集群最新的数据，所以在进行节点选举时就选ZXID最大的节点作为新节点，就可以保证在旧leader提交的数据，在新的leader也有。新leader选举完成后，learner从新leader同步数据，集群状态就可以和错误恢复之前一样。由于ZID的特殊设计，老的Leader节点如果恢复也不会立即重新被选为leader
